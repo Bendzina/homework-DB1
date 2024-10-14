@@ -119,3 +119,12 @@ def menu():
 # პროგრამის გაშვება
 if __name__ == "__main__":
     menu()
+
+    # კავშირის დახურვის ფუნქცია
+    def close(self):
+        self.cursor.close()
+        self.conn.close()
+        print("მონაცემთა ბაზასთან კავშირი დაიხურა")
+
+
+
