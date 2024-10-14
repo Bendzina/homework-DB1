@@ -1,4 +1,4 @@
-import sqlite3
+import psycopg2
 
 # Book კლასის განსაზღვრა
 class Book:
@@ -10,28 +10,28 @@ class Book:
 
 # მონაცემთა ბაზის ფუნქციონალი
 class BookDatabase:
-    def __init__(self, db_name="books.db"):
-        self.conn = sqlite3.connect(db_name)
+    def __init__(self, db_name, user, password, host='localhost', port='5432'):
+        self.conn = psycopg2.connect(database=db_name, user=user, password=password, host=host, port=port)
         self.cursor = self.conn.cursor()
         self.create_table()
 
     def create_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS books
-                            (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            title TEXT,
-                            author TEXT,
+                            (id SERIAL PRIMARY KEY,
+                            title VARCHAR(255),
+                            author VARCHAR(255),
                             release_year INTEGER,
-                            isbn TEXT UNIQUE)''')
+                            isbn VARCHAR(13) UNIQUE)''')
         self.conn.commit()
 
     def add_book(self, book):
         try:
             self.cursor.execute('''INSERT INTO books (title, author, release_year, isbn)
-                                   VALUES (?, ?, ?, ?)''',
+                                   VALUES (%s, %s, %s, %s)''',
                                    (book.title, book.author, book.release_year, book.isbn))
             self.conn.commit()
             print("წიგნი წარმატებით დაემატა")
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
             print("წიგნი მსგავსი ISBN-ით უკვე არსებობს")
 
     def get_all_books(self):
@@ -39,7 +39,7 @@ class BookDatabase:
         return self.cursor.fetchall()
 
     def search_book(self, isbn):
-        self.cursor.execute("SELECT * FROM books WHERE isbn = ?", (isbn,))
+        self.cursor.execute("SELECT * FROM books WHERE isbn = %s", (isbn,))
         return self.cursor.fetchone()
 
     def update_book(self, isbn, new_title=None, new_author=None, new_release_year=None):
@@ -49,8 +49,8 @@ class BookDatabase:
             updated_author = new_author if new_author else book[2]
             updated_release_year = new_release_year if new_release_year else book[3]
             self.cursor.execute('''UPDATE books
-                                   SET title = ?, author = ?, release_year = ?
-                                   WHERE isbn = ?''',
+                                   SET title = %s, author = %s, release_year = %s
+                                   WHERE isbn = %s''',
                                    (updated_title, updated_author, updated_release_year, isbn))
             self.conn.commit()
             print("წიგნის დეტალები განახლდა")
@@ -58,13 +58,13 @@ class BookDatabase:
             print("წიგნი ვერ მოიძებნა")
 
     def delete_book(self, isbn):
-        self.cursor.execute("DELETE FROM books WHERE isbn = ?", (isbn,))
+        self.cursor.execute("DELETE FROM books WHERE isbn = %s", (isbn,))
         self.conn.commit()
         print("წიგნი წარმატებით წაიშალა")
 
 # მენიუზე ორიენტირებული ინტერფეისი
 def menu():
-    db = BookDatabase()
+    db = BookDatabase(db_name="postgresdb", user="postgres", password="1234")
 
     while True:
         print("\n--- მენიუ ---")
